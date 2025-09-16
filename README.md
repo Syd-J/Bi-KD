@@ -1,2 +1,4 @@
-# Bi-KD
-Official implementation of "Simplifying Knowledge Transfer in Pretrained Models" (TMLR 2025)
+# Simplifying Knowledge Transfer in Pretrained Models (TMLR 2025)
+Official PyTorch implementation
+
+**All details to be added soon!**
