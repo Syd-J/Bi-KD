@@ -32,8 +32,8 @@ import pdb
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--train_data_path',default='/mnt/Shared-Storage/sid/datasets/UCF/training',type=str)
-parser.add_argument('--val_data_path',default='/mnt/Shared-Storage/sid/datasets/UCF/testing',type=str)
+parser.add_argument('--train_data_path',default='/mnt/SSD/DHF1K/annotation',type=str)
+parser.add_argument('--val_data_path',default='/mnt/SSD/DHF1K/val',type=str)
 
 parser.add_argument('--batch_size',default=4,type=int)
 parser.add_argument('--no_workers',default=4,type=int)

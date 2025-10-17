@@ -5,7 +5,7 @@ source /home/sid/miniconda3/bin/activate
 conda activate DL
 
 echo "starting train_tri_kd.py"
-cd /home/sid/Bi-KD/src/Bi-KD
+cd /home/sid/Bi-KD/src
 python train_tri_kd.py --model_1 CoaT-lite-mini --model_2 PiT-XS --model_3 ResMLP-24-dist
 
 conda deactivate
