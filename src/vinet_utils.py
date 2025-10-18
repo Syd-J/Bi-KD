@@ -585,4 +585,3 @@ class Mixed_5c(nn.Module):
         x3 = self.branch3(y)
         out = torch.cat((x0, x1, x2, x3), 1)
         return out
-

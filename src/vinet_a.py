@@ -1,18 +1,9 @@
 import torch
 from torch import nn
-import math
-from block import fusions
-from collections import OrderedDict
 from einops import rearrange
 
-# from swin_transformer import *
-# from vision_transformer import *
 
-import pdb
-
-#added
 BN = nn.BatchNorm3d
-
 
 class Bottleneck(nn.Module):
 	expansion = 4
@@ -65,7 +56,6 @@ class Bottleneck(nn.Module):
 class SlowFast(nn.Module):
 	def __init__(self, block, layers, alpha=4, beta=0.125, fuse_only_conv=True, fuse_kernel_size=5, slow_full_span=False,use_skip=True):
 		super(SlowFast, self).__init__()
-		# for DHF1K alpha=4 & beta=0.125, for SoundDataset alpha=8 & beta=0.125?
 		self.alpha = alpha
 		self.beta = beta
 		self.slow_full_span = slow_full_span
@@ -113,10 +103,8 @@ class SlowFast(nn.Module):
 		self.Tconv3 = fuse_func(int(512 * beta), int(1024 * beta))
 		self.Tconv4 = fuse_func(int(1024 * beta), int(2048 * beta))
 		
-		# self.use_skip = use_skip
 
 	def forward(self, input):
-		# print("Fast input shape",input.shape)
 
 		fast, Tc = self.FastPath(input)
 		if self.slow_full_span:
@@ -129,18 +117,13 @@ class SlowFast(nn.Module):
 					input.shape[2] // self.alpha,
 				).long().cuda(),
 			)
-			# print("Slow input shape: ",slow_input.shape)
 		else:
 			slow_input = input[:, :, ::self.alpha, :, :]
 			
 		if self.use_skip:
 			slow,skip = self.SlowPath(slow_input, Tc)
-			# pdb.set_trace()
-			# return [slow,fast,skip]
-			# added
 			return [slow, fast, *skip] 
 		slow = self.SlowPath(slow_input, Tc)
-		# pdb.set_trace()
 		return [slow, fast]
 
 	def SlowPath(self, input, Tc):
@@ -240,7 +223,6 @@ class SlowFast(nn.Module):
 def slowfast50(use_skip, **kwargs):
 	"""Constructs a SlowFast-50 model.
 	"""
-	# added use_skip parameter
 	model = SlowFast(Bottleneck, [3, 4, 6, 3], use_skip=use_skip, **kwargs)
 	return model
 
@@ -254,8 +236,6 @@ class Neck(nn.Module):
 						stride=(1,1,1), padding=(0, 0, 0), bias=False),
 				nn.ReLU()
 				)
-		# self.conv1x1 = nn.Conv3d(16,8,kernel_size=1,stride=1,padding=0,bias=False)
-
 		self.adaptive_maxpool = nn.AdaptiveMaxPool3d((8, 16, 29))
 
 		self.conv_skip1= nn.Sequential(
@@ -287,9 +267,6 @@ class Neck(nn.Module):
 							c=256*2, t=int(32/2))
 
 			slow_features = self.conv_slow(slow_features)
-
-			# fast_features = self.conv1x1(fast_features.permute(0,2,1,3,4))
-			# fast_features = fast_features.permute((0,2,1,3,4))
 
 			fast_features = self.adaptive_maxpool(fast_features)
 
@@ -455,13 +432,13 @@ class Decoder(nn.Module):
 		return z
 
 
-class EEAA(nn.Module):
+class ViNetA(nn.Module):
 	def __init__(self,
 				use_skip = True,
 				use_channel_shuffle=True,
 				decoder_groups=32
 			):
-		super(EEAA, self).__init__()
+		super(ViNetA, self).__init__()
 
 		self.use_skip = use_skip
 		self.use_channel_shuffle = use_channel_shuffle
@@ -473,22 +450,6 @@ class EEAA(nn.Module):
 		self.neck = Neck()
 
 		self.decoder = Decoder(decoder_groups=self.decoder_groups, use_channel_shuffle=self.use_channel_shuffle)
-
-		# encoder_params = sum(p.numel() for p in self.backbone.parameters() if p.requires_grad)
-		# decoder_params = sum(p.numel() for p in self.decoder.parameters() if p.requires_grad)
-		# neck_params = sum(p.numel() for p in self.neck.parameters() if p.requires_grad) if self.neck else 0
-		# total_params = encoder_params + decoder_params + neck_params
-		# print("Total number of parameters in the encoder:", encoder_params)
-		# print("Total number of parameters in the decoder:", decoder_params)
-		# print("Total number of parameters in the neck:", neck_params)
-		# print("Total number of parameters in the model (encoder + decoder + neck):", total_params)
-
-		# size_in_bytes = total_params * 4  # Each parameter is 4 bytes
-		# size_in_mb = size_in_bytes / (1024 * 1024)  # Convert bytes to MB
-		# # encoder_size_in_bytes = encoder_params * 4
-		# # encoder_size_in_mb = encoder_size_in_bytes / (1024 * 1024)
-		# # print("Size of the encoder: {:.2f} MB".format(encoder_size_in_mb))
-		# print("Size of the model: {:.2f} MB".format(size_in_mb))
 
 
 	def forward(self, x):

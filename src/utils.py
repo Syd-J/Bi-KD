@@ -1,26 +1,10 @@
-import os
-import sys
-import time
-import math
 import random
-import datetime
-import subprocess
-from collections import defaultdict, deque
 
-from matplotlib.pylab import seed
 import numpy as np
 import torch
 from torch import nn
-import torch.distributed as dist
-from PIL import ImageFilter, ImageOps
-from einops import rearrange, reduce, repeat
 
-from torch.nn import functional as F
-# from attmask import AttMask
-import random
-# from sinkhorn_knopp import SinkhornKnopp
-# for saliency prediction
-# from loss import *
+from loss import *
 
 
 def set_seed(seed):
@@ -81,14 +65,31 @@ def get_model_output(model, imgs, model_name):
 	return output['logits'] if model_name == "MambaVision-T2" else output
 
 
-def load_model_checkpoint(model, optimizer, checkpoint_path):
-	"""Load model and optimizer state from checkpoint."""
+def load_model_checkpoint(model, optimizer, checkpoint_path, metric_type='acc'):
+	"""Load model and optimizer state from checkpoint.
+	
+	Args:
+		model: Model to load state into
+		optimizer: Optimizer to load state into
+		checkpoint_path: Path to checkpoint file
+		metric_type: Type of metric to return ('acc' for accuracy, 'loss' for loss)
+	
+	Returns:
+		Metric value from checkpoint (accuracy or loss), or default value if not found
+	"""
 	if checkpoint_path != '':
 		checkpoint = torch.load(checkpoint_path)
 		model.load_state_dict(checkpoint['model_state_dict'])
 		optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-		return checkpoint.get('acc', -np.inf)
-	return -np.inf
+		
+		# Return the appropriate metric
+		if metric_type == 'loss':
+			return checkpoint.get('loss', np.inf)
+		else:
+			return checkpoint.get('acc', -np.inf)
+	
+	# Return default values
+	return np.inf if metric_type == 'loss' else -np.inf
 
 
 def print_model_info(model, model_name):
@@ -100,12 +101,85 @@ def print_model_info(model, model_name):
 	model_params_and_size(model)
 
 
-def save_checkpoint(model, optimizer, acc, save_path, model_type, epoch):
-	"""Save model checkpoint with optimizer state and accuracy."""
+def save_checkpoint(model, optimizer, metric, save_path, model_type, epoch, metric_type='acc'):
+	"""Save model checkpoint with optimizer state and metric (accuracy or loss).
+	
+	Args:
+		model: Model to save
+		optimizer: Optimizer to save
+		metric: Metric value (accuracy or loss)
+		save_path: Path to save checkpoint
+		model_type: Description of model (e.g., 'teacher', 'student')
+		epoch: Current epoch number
+		metric_type: Type of metric ('acc' for accuracy, 'loss' for loss)
+	"""
 	checkpoint = {
 		'model_state_dict': model.state_dict(),
 		'optimizer_state_dict': optimizer.state_dict(),
-		'acc': acc
 	}
+	
+	# Store metric with appropriate key based on type
+	if metric_type == 'loss':
+		checkpoint['loss'] = metric
+		checkpoint['acc'] = -metric  # Store negative loss as pseudo-accuracy for backward compatibility
+	else:
+		checkpoint['acc'] = metric
+		checkpoint['loss'] = np.inf  # Store inf as pseudo-loss for backward compatibility
+	
 	print("[{}, save {}, {}]".format(epoch+1, model_type, save_path))
 	torch.save(checkpoint, save_path)
+
+
+def get_loss(pred_map, gt, args, fix_map=None):
+	"""Calculate loss for saliency prediction."""
+	loss = torch.FloatTensor(pred_map.size(0)*[0.0]).cuda()
+	
+	if args.kldiv:
+		loss += args.kldiv_coeff * kldiv(pred_map, gt)
+	if args.cc:
+		loss += args.cc_coeff * cc(pred_map, gt)
+	if args.nss:
+		nss_loss = torch.FloatTensor([0.0]).cuda()
+		for i in range(pred_map.shape[0]):
+			pred_sal_resize = cv2.resize(pred_map[i].cpu().detach().numpy(), (fix_map[i].size(1), fix_map[i].size(0)))
+			nss_loss += nss(torch.from_numpy(pred_sal_resize).unsqueeze(0), fix_map[i].unsqueeze(0))
+		nss_loss /= pred_map.shape[0]
+		loss += args.nss_coeff * nss_loss
+	if args.l1:
+		criterion = nn.L1Loss(reduction='none')
+		loss += args.l1_coeff * criterion(pred_map, gt).mean(dim=(1,2))
+	if args.sim:
+		loss += args.sim_coeff * similarity(pred_map, gt)
+
+	return loss
+
+def loss_func(pred_map, gt, args, fix_map=None):
+	"""Calculate loss function for saliency prediction with clips support."""
+	loss = torch.FloatTensor(pred_map.size(0)*[0.0]).cuda()
+	criterion = nn.L1Loss()
+	assert pred_map.size() == gt.size()
+
+	if len(pred_map.size()) == 4:
+		# Clips: BxClXHxW
+		assert pred_map.size(0) == args.batch_size
+		pred_map = pred_map.permute((1,0,2,3))
+		gt = gt.permute((1,0,2,3))
+		if fix_map:
+			fix_map = fix_map.permute((1,0,2,3))
+
+		for i in range(pred_map.size(0)):
+			if fix_map:
+				loss += get_loss(pred_map[i], gt[i], args, fix_map[i])
+			else:
+				loss += get_loss(pred_map[i], gt[i], args)
+
+		loss /= pred_map.size(0)
+		return loss
+	
+	return get_loss(pred_map, gt, args, fix_map)
+
+def blur(img):
+	"""Apply Gaussian blur to image."""
+	k_size = 11
+	bl = cv2.GaussianBlur(img,(k_size,k_size),0)
+	return torch.FloatTensor(bl)

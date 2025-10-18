@@ -1,13 +1,10 @@
 import torch
 import os
-import h5py
 from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
-import copy
 import cv2
 import numpy as np
-import json
 
 
 class DHF1KDataset(Dataset):
@@ -31,8 +28,6 @@ class DHF1KDataset(Dataset):
 				transforms.Resize((256, 456)),
 				transforms.ToTensor(),
 				transforms.Normalize(
-					# [0.485, 0.456, 0.406],
-					# [0.229, 0.224, 0.225]
 					[0.450, 0.450, 0.450],
 					[0.225, 0.225, 0.225]
 				)
@@ -52,8 +47,6 @@ class DHF1KDataset(Dataset):
 				transforms.Resize((256, 456)),
 				transforms.ToTensor(),
 				transforms.Normalize(
-					# [0.485, 0.456, 0.406],
-					# [0.229, 0.224, 0.225]
 					[0.450, 0.450, 0.450],
 					[0.225, 0.225, 0.225]
 				)
@@ -81,15 +74,9 @@ class DHF1KDataset(Dataset):
 		path_clip = os.path.join(self.path_data, file_name, 'images')
 		path_annt = os.path.join(self.path_data, file_name, 'maps')
 
-		# print("File name: ", file_name, len(path_clip))
-		# print("GT index: ", gt_idx)
-
 		teacher_clip_img = []
 
 		student_clip_img = []
-
-		# TMFINet_frames = []
-		# ViNetA_frames = []
 	
 		for i in range(self.len_snippet):
 
@@ -98,23 +85,18 @@ class DHF1KDataset(Dataset):
 				if i < self.len_snippet // 2:
 					if gt_idx - (self.len_snippet // 2) + i + 2 <= 0:
 						teacher_img = Image.open(os.path.join(path_clip, '0001.png')).convert('RGB')
-						# TMFINet_frames.append(0)
 					else:
 						teacher_img = Image.open(os.path.join(path_clip, '%04d.png' % (gt_idx - (self.len_snippet // 2) + i + 2))).convert('RGB')
-						# TMFINet_frames.append(gt_idx - (self.len_snippet // 2) + i + 2)
 
 					teacher_clip_img.append(self.teacher_img_transform(teacher_img))
 
 				if i % 2 == 0:
 					if (gt_idx - (self.len_snippet // 2) + i + 1) <= 0:
 						student_img = Image.open(os.path.join(path_clip, '0001.png')).convert('RGB')
-						# ViNetA_frames.append(0)
 					elif (gt_idx - (self.len_snippet // 2) + i + 1) >= len(os.listdir(path_clip)):
 						student_img = Image.open(os.path.join(path_clip, '%04d.png' % (len(os.listdir(path_clip))))).convert('RGB')
-						# ViNetA_frames.append(len(os.listdir(path_clip)))
 					else:
 						student_img = Image.open(os.path.join(path_clip, '%04d.png' % (gt_idx - (self.len_snippet // 2) + i + 1))).convert('RGB')
-						# ViNetA_frames.append(gt_idx - (self.len_snippet // 2) + i + 1)
 
 					student_clip_img.append(self.student_img_transform(student_img))
 
@@ -123,31 +105,23 @@ class DHF1KDataset(Dataset):
 				if i < self.len_snippet // 2:
 					if gt_idx - (self.len_snippet // 2) + i + 2 <= 0:
 						student_img = Image.open(os.path.join(path_clip, '0001.png')).convert('RGB')
-						# TMFINet_frames.append(0)
 					else:
 						student_img = Image.open(os.path.join(path_clip, '%04d.png' % (gt_idx - (self.len_snippet // 2) + i + 2))).convert('RGB')
-						# TMFINet_frames.append(gt_idx - (self.len_snippet // 2) + i + 2)
 
 					student_clip_img.append(self.student_img_transform(student_img))
 
 				if i % 2 == 0:
 					if (gt_idx - (self.len_snippet // 2) + i + 1) <= 0:
 						teacher_img = Image.open(os.path.join(path_clip, '0001.png')).convert('RGB')
-						# ViNetA_frames.append(0)
 					elif (gt_idx - (self.len_snippet // 2) + i + 1) >= len(os.listdir(path_clip)):
 						teacher_img = Image.open(os.path.join(path_clip, '%04d.png' % (len(os.listdir(path_clip))))).convert('RGB')
-						# ViNetA_frames.append(len(os.listdir(path_clip)))
 					else:
 						teacher_img = Image.open(os.path.join(path_clip, '%04d.png' % (gt_idx - (self.len_snippet // 2) + i + 1))).convert('RGB')
-						# ViNetA_frames.append(gt_idx - (self.len_snippet // 2) + i + 1)
 
 					teacher_clip_img.append(self.teacher_img_transform(teacher_img))
 
 		teacher_clip_img = torch.FloatTensor(torch.stack(teacher_clip_img, dim=0))
 		student_clip_img = torch.FloatTensor(torch.stack(student_clip_img, dim=0))
-
-		# print("TMFI-Net frames: ", TMFINet_frames, len(TMFINet_frames))
-		# print("ViNet-A frames: ", ViNetA_frames, len(ViNetA_frames))
 
 		gt = np.array(Image.open(os.path.join(path_annt, '%04d.png' % (gt_idx + 1))).convert('L'))
 		gt = gt.astype('float')
@@ -181,8 +155,6 @@ class HollywoodDataset(Dataset):
 			transforms.Resize((256, 456)),
 			transforms.ToTensor(),
 			transforms.Normalize(
-				# [0.485, 0.456, 0.406],
-				# [0.229, 0.224, 0.225]
 				[0.450, 0.450, 0.450],
 				[0.225, 0.225, 0.225]
 			)
@@ -231,41 +203,27 @@ class HollywoodDataset(Dataset):
 			list_clips.extend(temp1)
 			list_sal_clips.extend(temp2)
 
-		# print("File name: ", video_name, len(list_clips))
-		# print("GT index: ", gt_idx)
-
 		teacher_clip_img = []
 		student_clip_img = []
-
-		# TMFINet_frames = []
-		# ViNetA_frames = []		
 
 		for i in range(self.len_snippet):
 
 			if gt_idx - self.len_snippet + i + 1 <= 0:
 				teacher_img = Image.open(os.path.join(path_clip, list_clips[0])).convert('RGB')
-				# TMFINet_frames.append(0)
 			else:
 				teacher_img = Image.open(os.path.join(path_clip, list_clips[gt_idx - self.len_snippet + i + 1])).convert('RGB')
-				# TMFINet_frames.append(gt_idx - self.len_snippet + i + 1)
 			teacher_clip_img.append(self.teacher_img_transform(teacher_img))
 
 			if gt_idx - (self.len_snippet // 2) + i <= 0:
 				student_img = Image.open(os.path.join(path_clip, list_clips[0])).convert('RGB')
-				# ViNetA_frames.append(0)
 			elif gt_idx - (self.len_snippet // 2) + i >= len(list_clips):
 				student_img = Image.open(os.path.join(path_clip, list_clips[-1])).convert('RGB')
-				# ViNetA_frames.append(len(list_clips) - 1)
 			else:
 				student_img = Image.open(os.path.join(path_clip, list_clips[gt_idx - (self.len_snippet // 2) + i])).convert('RGB')
-				# ViNetA_frames.append(gt_idx - (self.len_snippet // 2) + i)
 			student_clip_img.append(self.student_img_transform(student_img))
 
 		teacher_clip_img = torch.FloatTensor(torch.stack(teacher_clip_img, dim=0))
 		student_clip_img = torch.FloatTensor(torch.stack(student_clip_img, dim=0))
-
-		# print("TMFI-Net frames: ", TMFINet_frames, len(TMFINet_frames))
-		# print("ViNet-A frames: ", ViNetA_frames, len(ViNetA_frames))
 
 		gt = np.array(Image.open(os.path.join(path_annt, list_sal_clips[gt_idx])).convert('L'))
 		gt = gt.astype('float')

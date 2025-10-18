@@ -5,9 +5,6 @@ import torch.utils.checkpoint as checkpoint
 import numpy as np
 from timm.models.layers import DropPath, trunc_normal_
 import copy
-# from mmcv.runner import load_checkpoint
-# from utils import get_root_logger
-# from builder import BACKBONES
 from functools import reduce, lru_cache
 from operator import mul
 from einops import rearrange

@@ -16,8 +16,8 @@ from utils import *
 parser = argparse.ArgumentParser(description='Quad-KD Training (4 models)')
 
 # Data paths
-parser.add_argument('--train_data_path',default='/home/sid/ImageNet/train',type=str,help='path to training data')
-parser.add_argument('--val_data_path',default='/home/sid/ImageNet/val',type=str,help='path to validation data')
+parser.add_argument('--train_data_path',default='/mnt/SSD/ImageNet/train',type=str,help='path to training data')
+parser.add_argument('--val_data_path',default='/mnt/SSD/ImageNet/val',type=str,help='path to validation data')
 
 # Training hyperparameters
 parser.add_argument('--batch_size',default=128,type=int,help='batch size')
@@ -125,10 +125,10 @@ model_3_optimizer = torch.optim.Adam(model_3_params, lr=args.lr_3, weight_decay=
 model_4_optimizer = torch.optim.Adam(model_4_params, lr=args.lr_4, weight_decay=args.weight_decay)
 
 # Load checkpoints if provided (including optimizer states and best accuracy)
-best_1_acc = load_model_checkpoint(model_1, model_1_optimizer, args.load_1_path)
-best_2_acc = load_model_checkpoint(model_2, model_2_optimizer, args.load_2_path)
-best_3_acc = load_model_checkpoint(model_3, model_3_optimizer, args.load_3_path)
-best_4_acc = load_model_checkpoint(model_4, model_4_optimizer, args.load_4_path)
+best_1_acc = load_model_checkpoint(model_1, model_1_optimizer, args.load_1_path, metric_type='acc')
+best_2_acc = load_model_checkpoint(model_2, model_2_optimizer, args.load_2_path, metric_type='acc')
+best_3_acc = load_model_checkpoint(model_3, model_3_optimizer, args.load_3_path, metric_type='acc')
+best_4_acc = load_model_checkpoint(model_4, model_4_optimizer, args.load_4_path, metric_type='acc')
 
 criterion = nn.CrossEntropyLoss()
 
@@ -305,22 +305,22 @@ for epoch in range(args.no_epochs):
 		# Save model 1 checkpoint if improved
 		if val_1_acc >= best_1_acc:
 			best_1_acc = val_1_acc
-			save_checkpoint(model_1, model_1_optimizer, best_1_acc, args.model_1_val_path, "model 1", epoch)
+			save_checkpoint(model_1, model_1_optimizer, best_1_acc, args.model_1_val_path, "model 1", epoch, metric_type='acc')
 
 		# Save model 2 checkpoint if improved
 		if val_2_acc >= best_2_acc:
 			best_2_acc = val_2_acc
-			save_checkpoint(model_2, model_2_optimizer, best_2_acc, args.model_2_val_path, "model 2", epoch)
+			save_checkpoint(model_2, model_2_optimizer, best_2_acc, args.model_2_val_path, "model 2", epoch, metric_type='acc')
 
 		# Save model 3 checkpoint if improved
 		if val_3_acc >= best_3_acc:
 			best_3_acc = val_3_acc
-			save_checkpoint(model_3, model_3_optimizer, best_3_acc, args.model_3_val_path, "model 3", epoch)
+			save_checkpoint(model_3, model_3_optimizer, best_3_acc, args.model_3_val_path, "model 3", epoch, metric_type='acc')
 
 		# Save model 4 checkpoint if improved
 		if val_4_acc >= best_4_acc:
 			best_4_acc = val_4_acc
-			save_checkpoint(model_4, model_4_optimizer, best_4_acc, args.model_4_val_path, "model 4", epoch)
+			save_checkpoint(model_4, model_4_optimizer, best_4_acc, args.model_4_val_path, "model 4", epoch, metric_type='acc')
 	print()
 
 if args.log_wandb:

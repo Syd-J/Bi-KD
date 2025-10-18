@@ -1,16 +1,7 @@
 import torch
-import torchvision
-import torch.nn as nn
-import torch.nn.functional as F
-from PIL import Image
-from torchvision.models import vgg19
-from torchvision import transforms
-from torch.autograd import Variable
 import numpy as np
-from torch.distributions.multivariate_normal import MultivariateNormal as Norm
 import cv2
 
-import pdb
 
 def kldiv(s_map, gt):
     assert s_map.size() == gt.size()
@@ -36,9 +27,6 @@ def kldiv(s_map, gt):
 
     eps = 2.2204e-16
     result = gt * torch.log(eps + gt/(s_map + eps))
-    # print(torch.log(eps + gt/(s_map + eps))   )
-    # return torch.mean(torch.sum(result, 1))
-    # sample(batch) wise loss
     return torch.sum(result, 1)
 
 
@@ -100,18 +88,14 @@ def cc(s_map, gt):
     aa = torch.sum((s_map * s_map).view(batch_size, -1), 1)
     bb = torch.sum((gt * gt).view(batch_size, -1), 1)
 
-    # return torch.mean(ab / (torch.sqrt(aa*bb)))
-    # sample(batch) wise loss
     return ab / (torch.sqrt(aa*bb))
 
 def nss(s_map, gt):
-    # pdb.set_trace()
     if s_map.size() != gt.size():
         s_map = s_map.cpu().squeeze(0).numpy()
         s_map = torch.FloatTensor(cv2.resize(s_map, (gt.size(2), gt.size(1)))).unsqueeze(0)
         s_map = s_map.cuda()
         gt = gt.cuda()
-    # print(s_map.size(), gt.size()))
     assert s_map.size()==gt.size()
     batch_size = s_map.size(0)
     w = s_map.size(1)
@@ -123,8 +107,6 @@ def nss(s_map, gt):
     s_map = (s_map - mean_s_map) / (std_s_map + eps)
 
     s_map = torch.sum((s_map * gt).view(batch_size, -1), 1)
-    # count = torch.sum(gt.view(batch_size, -1), 1)
-    # added for generate_result_audio_visual
     count = torch.sum(gt.reshape(batch_size, -1), 1)
     return torch.mean(s_map / count)
 

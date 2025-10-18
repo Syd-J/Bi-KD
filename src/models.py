@@ -3,6 +3,10 @@ import torch
 from transformers import AutoModelForImageClassification
 
 import mae
+import tmfi_net as TMFINet
+from vinet_a import ViNetA
+import vinet_s as ViNetS
+
 
 _timm_models = {
     'SeNet154': 'senet154.gluon_in1k',
@@ -39,4 +43,30 @@ def create_model(model_name, pretrained=True):
     else:
         raise NotImplementedError(f'Model {model_name} not implemented.')
 
-
+def create_sal_model(model_name, args, pretrained=True, dataset='DHF1K'):
+    if model_name == 'TMFI-Net':
+        model = TMFINet.VideoSaliencyModel()
+        if pretrained:
+            model.load_state_dict(torch.load(f'pretrained/best_VSTNet_{dataset}.pth'))
+        return model
+    elif model_name == 'ViNet-A':
+        model = ViNetA(use_skip=args['use_skip'], use_channel_shuffle=args['use_channel_shuffle'], decoder_groups=args['decoder_groups'])
+        if pretrained:
+            model.load_state_dict(torch.load(f'pretrained/ViNetA_{dataset}_32g.pt'))
+        return model
+    elif model_name == 'ViNet-S':
+        model = ViNetS.VideoSaliencyModel(
+		use_upsample=bool(args['decoder_upsample']),
+        num_hier=args['num_hier'],
+        num_clips=32,
+        grouped_conv=args['grouped_conv'],
+        root_grouping=args['root_grouping'],
+        depth=args['depth_grouping'],
+        efficientnet=args['efficientnet'],
+        BiCubic = not args['use_trilinear_upsampling'],
+	)
+        if pretrained:
+            model.load_state_dict(torch.load(f'pretrained/vinet_rootgrouped_32_{dataset}.pt'))
+        return model
+    else:
+        raise NotImplementedError(f'Saliency model {model_name} not implemented.')

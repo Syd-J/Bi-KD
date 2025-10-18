@@ -17,8 +17,8 @@ from utils import *
 parser = argparse.ArgumentParser(description='Bi-KD Training')
 
 # Data paths
-parser.add_argument('--train_data_path',default='/home/sid/ImageNet/train',type=str,help='path to training data')
-parser.add_argument('--val_data_path',default='/home/sid/ImageNet/val',type=str,help='path to validation data')
+parser.add_argument('--train_data_path',default='/mnt/SSD/ImageNet/train',type=str,help='path to training data')
+parser.add_argument('--val_data_path',default='/mnt/SSD/ImageNet/val',type=str,help='path to validation data')
 
 # Training hyperparameters
 parser.add_argument('--batch_size',default=128,type=int,help='batch size')
@@ -95,8 +95,8 @@ teacher_optimizer = torch.optim.Adam(teacher_params, lr=args.t_lr, weight_decay=
 student_optimizer = torch.optim.Adam(student_params, lr=args.s_lr, weight_decay=args.weight_decay)
 
 # Load checkpoints if provided (including optimizer states and best accuracy)
-best_t_acc = load_model_checkpoint(teacher_model, teacher_optimizer, args.load_t_path)
-best_s_acc = load_model_checkpoint(student_model, student_optimizer, args.load_s_path)
+best_t_acc = load_model_checkpoint(teacher_model, teacher_optimizer, args.load_t_path, metric_type='acc')
+best_s_acc = load_model_checkpoint(student_model, student_optimizer, args.load_s_path, metric_type='acc')
 
 criterion = nn.CrossEntropyLoss()
 
@@ -228,12 +228,12 @@ for epoch in range(args.no_epochs):
 		# Save teacher checkpoint if improved
 		if t_val_acc >= best_t_acc:
 			best_t_acc = t_val_acc
-			save_checkpoint(teacher_model, teacher_optimizer, best_t_acc, args.t_model_val_path, "teacher", epoch)
+			save_checkpoint(teacher_model, teacher_optimizer, best_t_acc, args.t_model_val_path, "teacher", epoch, metric_type='acc')
 
 		# Save student checkpoint if improved
 		if s_val_acc >= best_s_acc:
 			best_s_acc = s_val_acc
-			save_checkpoint(student_model, student_optimizer, best_s_acc, args.s_model_val_path, "student", epoch)
+			save_checkpoint(student_model, student_optimizer, best_s_acc, args.s_model_val_path, "student", epoch, metric_type='acc')
 	print()
 
 if args.log_wandb:
