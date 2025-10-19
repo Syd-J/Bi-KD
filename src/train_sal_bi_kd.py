@@ -6,7 +6,6 @@ import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 import wandb
 
 from dataloader import DHF1KDataset, HollywoodDataset
