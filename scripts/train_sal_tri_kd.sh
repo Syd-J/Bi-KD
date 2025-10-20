@@ -5,7 +5,7 @@ DATASET=${1:-DHF1K}  # Default to DHF1K if no argument provided
 
 echo "activating environment"
 eval "$(conda shell.bash hook)"
-conda activate DL
+conda activate bi-kd
 
 # Set dataset-specific paths and clip size
 case $DATASET in

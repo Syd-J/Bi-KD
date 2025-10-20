@@ -2,7 +2,7 @@
 
 echo "activating environment"
 source /home/sid/miniconda3/bin/activate
-conda activate DL
+conda activate bi-kd
 
 echo "starting train_tri_kd.py"
 cd /home/sid/Bi-KD/src
